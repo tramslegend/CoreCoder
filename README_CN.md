@@ -1,5 +1,7 @@
 # NanoCoder
 
+[English](README.md) | [中文](README_CN.md) | [Claude Code 源码深度导读（7 篇）](article/)
+
 [![PyPI](https://img.shields.io/pypi/v/nanocoder)](https://pypi.org/project/nanocoder/)
 [![Python](https://img.shields.io/badge/python-3.10+-blue)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -10,8 +12,6 @@
 我通读了 Claude Code 泄露的全部源码，然后把所有不承重的部分扔掉，用 Python 重写了核心。这就是结果：一个装得进你脑子里的 AI 编程 Agent。
 
 > *可以理解为编程 Agent 领域的 [nanoGPT](https://github.com/karpathy/nanoGPT)。*
-
-[English](README.md) | [中文](README_CN.md) | [Claude Code 源码深度导读（7 篇）](article/)
 
 ---
 
