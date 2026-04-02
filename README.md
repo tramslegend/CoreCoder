@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Tests](https://github.com/he-yufeng/NanoCoder/actions/workflows/ci.yml/badge.svg)](https://github.com/he-yufeng/NanoCoder/actions)
 
-[English](README.md) | [中文](README_CN.md) | [Claude Code Architecture Deep Dive (7 articles)](article/)
+[中文](README_CN.md) | [English](README.md) | [Claude Code Architecture Deep Dive (7 articles)](article/)
 
 **512,000 lines of TypeScript → 1,300 lines of Python.**
 
