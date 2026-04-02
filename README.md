@@ -54,46 +54,46 @@ Every pattern is a real, runnable implementation — not a diagram or a blog pos
 pip install nanocoder
 ```
 
-### Kimi K2.5 (recommended — strong coding, 128K context)
+### Kimi K2.5 (recommended — multimodal agentic, 256K context)
 
 ```bash
 export OPENAI_API_KEY=your-key
-export OPENAI_BASE_URL=https://api.moonshot.cn/v1
+export OPENAI_BASE_URL=https://api.moonshot.ai/v1
 nanocoder -m kimi-k2.5
 ```
 
-### Claude (via OpenRouter)
+### Claude Opus 4.6 (via OpenRouter)
 
 ```bash
 export OPENAI_API_KEY=your-openrouter-key
 export OPENAI_BASE_URL=https://openrouter.ai/api/v1
-nanocoder -m anthropic/claude-sonnet-4
+nanocoder -m anthropic/claude-opus-4-6
 ```
 
 ### More providers
 
 ```bash
-# OpenAI
+# GPT-4o (OpenAI)
 export OPENAI_API_KEY=sk-...
 nanocoder -m gpt-4o
 
-# DeepSeek
+# DeepSeek V3
 export OPENAI_API_KEY=sk-... OPENAI_BASE_URL=https://api.deepseek.com
 nanocoder -m deepseek-chat
 
-# Qwen
+# Qwen 3.5 (Alibaba)
 export OPENAI_API_KEY=sk-... OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-nanocoder -m qwen-plus
+nanocoder -m qwen-max
 
 # Local (Ollama)
 export OPENAI_API_KEY=ollama OPENAI_BASE_URL=http://localhost:11434/v1
-nanocoder -m qwen2.5-coder
+nanocoder -m qwen3:32b
 
 # One-shot mode
 nanocoder -p "add error handling to parse_config()"
 ```
 
-Works with **any OpenAI-compatible API**: Kimi, Claude (via OpenRouter), OpenAI, DeepSeek, Qwen, GLM, Ollama, vLLM, Together AI.
+Works with **any OpenAI-compatible API**: Kimi, Claude (via OpenRouter), GPT, DeepSeek, Qwen, Gemini, GLM, Ollama, vLLM, Together AI.
 
 ## Architecture
 
@@ -123,7 +123,7 @@ nanocoder/
 ```python
 from nanocoder import Agent, LLM
 
-llm = LLM(model="kimi-k2.5", api_key="your-key", base_url="https://api.moonshot.cn/v1")
+llm = LLM(model="kimi-k2.5", api_key="your-key", base_url="https://api.moonshot.ai/v1")
 agent = Agent(llm=llm)
 response = agent.chat("find all TODO comments in this project and list them")
 ```
