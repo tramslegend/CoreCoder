@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "nanocoder"
 version = "0.1.0"
-description = "Minimal AI coding agent (~600 LoC) inspired by Claude Code. Works with any LLM."
+description = "Minimal AI coding agent (~1300 LoC) inspired by Claude Code. Works with any LLM."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -26,6 +26,9 @@ dependencies = [
     "rich>=13.0",
     "prompt_toolkit>=3.0",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
 
 [project.scripts]
 nanocoder = "nanocoder.cli:main"

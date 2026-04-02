@@ -15,5 +15,3 @@
 **2. 写了一套 7 篇的 Claude Code 源码导读。** 从 Agent 循环到工具系统到多 Agent 协作到未发布功能，每篇围绕一个核心设计模式展开。如果你看完这篇分析想深入了解具体实现，从导读开始。
 
 👉 [Claude Code 源码导读系列](https://github.com/he-yufeng/NanoCoder/tree/main/article)
-
-另外还有完整版导读（16 篇、16 万字）在 GitHub 的 docs/ 目录下，覆盖了从构建系统到 MCP 协议的每个子系统。
