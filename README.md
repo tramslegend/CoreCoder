@@ -1,5 +1,10 @@
 # NanoCoder
 
+[![PyPI](https://img.shields.io/pypi/v/nanocoder)](https://pypi.org/project/nanocoder/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Tests](https://github.com/he-yufeng/NanoCoder/actions/workflows/ci.yml/badge.svg)](https://github.com/he-yufeng/NanoCoder/actions)
+
 **512,000 lines of TypeScript → 1,300 lines of Python.**
 
 I spent a weekend reading through the leaked Claude Code source — all half a million lines of it. Somewhere around 3 AM, staring at `StreamingToolExecutor.ts` and its 530-line parallel tool orchestration system, I thought: the core ideas here are brilliant, but you shouldn't need to reverse-engineer a proprietary codebase to understand them.

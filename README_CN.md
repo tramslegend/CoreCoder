@@ -1,5 +1,10 @@
 # NanoCoder
 
+[![PyPI](https://img.shields.io/pypi/v/nanocoder)](https://pypi.org/project/nanocoder/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Tests](https://github.com/he-yufeng/NanoCoder/actions/workflows/ci.yml/badge.svg)](https://github.com/he-yufeng/NanoCoder/actions)
+
 **51万行 TypeScript → 1300 行 Python。**
 
 我花了一个周末通读 Claude Code 泄露的全部源码。凌晨三点，盯着 `StreamingToolExecutor.ts` 里 530 行的并行工具编排系统，我想：这些设计确实精妙，但不应该需要逆向一个闭源代码库才能理解它们。
