@@ -8,13 +8,13 @@
 
 ---
 
-## 技术栈：Bun + TypeScript + React？
+## 技术栈：Bun + TypeScript + React
 
 对，你没看错。一个终端 CLI 工具用了 React。
 
-先说 Bun。Claude Code 的运行时不是 Node.js 而是 Bun。原因很现实：一个 CLI 工具如果启动要两三秒，每天用几十次，你很快就会受不了。Bun 的冷启动大约是 Node.js 的四分之一，而且原生支持 TypeScript，不需要 tsc 编译步骤。51 万行 TS 在 Node.js 上构建一次可能要一分钟，Bun 十几秒。
+TUI 层用 React 不算新鲜，Ink 2017 年就有了，Gatsby CLI、Prisma CLI 都在用。
 
-再说 React。我第一反应也是"终端用 React 是不是过度工程了"。但翻完 `src/screens/` 和 `src/components/` 之后理解了。Claude Code 的终端界面不是简单的 `console.log`——它有实时更新的 spinner、多面板布局、工具执行进度条、代码 diff 高亮、权限弹窗。多个 Agent 并行工作时，每个 Agent 的输出要在不同面板里实时更新。状态管理的复杂度到了这个级别，用 React + Ink 框架（2017 年就有了，Gatsby CLI、Prisma CLI 都用过）比手搓 ANSI 转义码合理得多。
+不过 Claude Code 的场景比一般 CLI 复杂不少：多个 Agent 并行、流式输出、工具执行中用户随时中断、权限弹窗。状态管理的复杂度到了这个级别，用 React 确实比手搓合理。
 
 ```
 技术选型：
