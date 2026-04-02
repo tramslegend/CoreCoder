@@ -146,6 +146,16 @@ def _repl(agent: Agent, config: Config):
                 config.model = new_model
                 console.print(f"Switched to [cyan]{new_model}[/cyan]")
             continue
+        if user_input == "/compact":
+            from .context import estimate_tokens
+            before = estimate_tokens(agent.messages)
+            compressed = agent.context.maybe_compress(agent.messages, agent.llm)
+            after = estimate_tokens(agent.messages)
+            if compressed:
+                console.print(f"[green]Compressed: {before} → {after} tokens ({len(agent.messages)} messages)[/green]")
+            else:
+                console.print(f"[dim]Nothing to compress ({before} tokens, {len(agent.messages)} messages)[/dim]")
+            continue
         if user_input == "/save":
             sid = save_session(agent.messages, config.model)
             console.print(f"[green]Session saved: {sid}[/green]")
@@ -190,6 +200,7 @@ def _show_help():
         "  /reset         Clear conversation history\n"
         "  /model <name>  Switch model mid-conversation\n"
         "  /tokens        Show token usage\n"
+        "  /compact       Compress conversation context\n"
         "  /save          Save session to disk\n"
         "  /sessions      List saved sessions\n"
         "  quit           Exit NanoCoder",

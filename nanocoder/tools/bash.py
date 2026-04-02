@@ -4,11 +4,16 @@ Claude Code's BashTool is 1,143 lines. This is the distilled version:
 - Output capture with truncation (head+tail preserved)
 - Timeout support
 - Dangerous command detection
+- Working directory tracking (cd awareness)
 """
 
+import os
 import re
 import subprocess
 from .base import Tool
+
+# track cwd across commands (Claude Code does this too)
+_cwd: str | None = None
 
 # patterns that could wreck the filesystem or leak secrets
 _DANGEROUS_PATTERNS = [
@@ -46,10 +51,14 @@ class BashTool(Tool):
     }
 
     def execute(self, command: str, timeout: int = 120) -> str:
+        global _cwd
         # safety check
         warning = _check_dangerous(command)
         if warning:
             return f"⚠ Blocked: {warning}\nCommand: {command}\nIf intentional, modify the command to be more specific."
+
+        # use tracked working directory
+        cwd = _cwd or os.getcwd()
 
         try:
             proc = subprocess.run(
@@ -58,7 +67,12 @@ class BashTool(Tool):
                 capture_output=True,
                 text=True,
                 timeout=timeout,
+                cwd=cwd,
             )
+
+            # track cd commands so next command runs in the right place
+            if proc.returncode == 0:
+                _update_cwd(command, cwd)
             out = proc.stdout
             if proc.stderr:
                 out += f"\n[stderr]\n{proc.stderr}"
@@ -84,3 +98,18 @@ def _check_dangerous(cmd: str) -> str | None:
         if re.search(pattern, cmd):
             return reason
     return None
+
+
+def _update_cwd(command: str, current_cwd: str):
+    """Track directory changes from cd commands."""
+    global _cwd
+    # simple heuristic: look for cd at the end of a && chain or standalone
+    parts = command.split("&&")
+    for part in parts:
+        part = part.strip()
+        if part.startswith("cd "):
+            target = part[3:].strip().strip("'\"")
+            if target:
+                new_dir = os.path.normpath(os.path.join(current_cwd, os.path.expanduser(target)))
+                if os.path.isdir(new_dir):
+                    _cwd = new_dir

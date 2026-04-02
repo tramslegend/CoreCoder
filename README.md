@@ -7,174 +7,154 @@
 
 **512,000 lines of TypeScript → 1,300 lines of Python.**
 
-I spent a weekend reading through the leaked Claude Code source — all half a million lines of it. Somewhere around 3 AM, staring at `StreamingToolExecutor.ts` and its 530-line parallel tool orchestration system, I thought: the core ideas here are brilliant, but you shouldn't need to reverse-engineer a proprietary codebase to understand them.
+I read every line of the leaked Claude Code source. Then I threw away everything that wasn't load-bearing and rebuilt the core in Python. This is the result: a fully functional AI coding agent that fits in your head.
 
-So I rebuilt the essential architecture from scratch. **NanoCoder is what's left when you strip away everything that isn't load-bearing.** Every file fits on one screen. Every design decision comes from a battle-tested production system.
+> *Think [nanoGPT](https://github.com/karpathy/nanoGPT) for coding agents.*
 
-[English](README.md) | [中文](README_CN.md) | [Claude Code Source Guide (7-part series)](article/)
+[English](README.md) | [中文](README_CN.md) | [Claude Code Architecture Deep Dive (7 articles)](article/)
 
-## What Can It Actually Do?
+---
 
 ```
+$ nanocoder -m deepseek-chat
+
 You > read main.py and fix the broken import
 
-> read_file(file_path='main.py')
-> edit_file(file_path='main.py', old_string='from utils import halper', new_string='from utils import helper')
+  > read_file(file_path='main.py')
+  > edit_file(file_path='main.py', ...)
+
 --- a/main.py
 +++ b/main.py
-@@ -1,4 +1,4 @@
+@@ -1 +1 @@
 -from utils import halper
 +from utils import helper
 
-Fixed the typo: `halper` → `helper`.
+Fixed: halper → helper.
 ```
 
-It reads your code, makes targeted edits (showing you exactly what changed), runs commands, searches your codebase — the same workflow as Claude Code, but with **any LLM you want**.
+---
 
-## Why This Exists
+## Why
 
-Claude Code is great, but:
+Claude Code only works with Anthropic's API. Its source is 512K lines you can't modify. And every other "alternative" is either a 100K-line project you can't read, or a wrapper with no real architecture.
 
-1. **It only works with Anthropic's API.** If you're using DeepSeek, Qwen, Kimi, or a local model — you're out of luck.
-2. **The source is 512,000 lines of TypeScript.** Even with the leak, understanding how it *actually works* requires serious archaeology.
-3. **You can't hack on it.** Want to add a custom tool? Change the agent loop? Good luck modifying a proprietary codebase you're not supposed to have.
+NanoCoder is **1,300 lines** with every key design pattern from Claude Code:
 
-NanoCoder fixes all three: it's **1,300 lines** you can read in an afternoon, it works with **any OpenAI-compatible API**, and it's MIT-licensed — fork it, break it, ship something new.
+- **Search-and-replace editing** — unique match required, unified diff output. No more editing the wrong line.
+- **Parallel tool execution** — ThreadPool runs independent tools concurrently. Same idea as Claude Code's StreamingToolExecutor.
+- **3-layer context compression** — snip tool outputs → LLM summarize → hard collapse. Mirrors HISTORY_SNIP → Microcompact → CONTEXT_COLLAPSE.
+- **Sub-agent spawning** — delegate complex sub-tasks to agents with isolated context.
+- **Dangerous command blocking** — `rm -rf /`, fork bombs, `curl | bash`.
+- **Working directory tracking** — `cd` in bash actually works across commands.
+- **API retry with backoff** — 429, timeout, 5xx handled automatically.
+- **Session persistence** — save/resume conversations.
 
-## Quick Start
+## Install
 
 ```bash
 pip install nanocoder
 ```
 
-Pick your model:
-
 ```bash
+# DeepSeek
+export OPENAI_API_KEY=sk-... OPENAI_BASE_URL=https://api.deepseek.com
+nanocoder -m deepseek-chat
+
+# Qwen
+export OPENAI_API_KEY=sk-... OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+nanocoder -m qwen-plus
+
+# Ollama (local)
+export OPENAI_API_KEY=ollama OPENAI_BASE_URL=http://localhost:11434/v1
+nanocoder -m qwen2.5-coder
+
 # OpenAI
 export OPENAI_API_KEY=sk-...
 nanocoder
 
-# DeepSeek (recommended for Chinese developers)
-export OPENAI_API_KEY=sk-...
-export OPENAI_BASE_URL=https://api.deepseek.com
-nanocoder -m deepseek-chat
-
-# Local model via Ollama
-export OPENAI_API_KEY=ollama
-export OPENAI_BASE_URL=http://localhost:11434/v1
-nanocoder -m qwen2.5-coder
-
-# One-shot mode (no REPL)
+# One-shot
 nanocoder -p "add error handling to parse_config()"
 ```
 
-Works with any OpenAI-compatible provider: **OpenAI, DeepSeek, Qwen, Kimi, Zhipu GLM, Ollama, vLLM, OpenRouter, Together AI** — if it speaks the OpenAI chat API, it works.
+Works with **any OpenAI-compatible API**: OpenAI, DeepSeek, Qwen, Kimi, GLM, Ollama, vLLM, OpenRouter, Together AI.
 
-## What's Inside
-
-The whole thing fits in your head:
+## Architecture
 
 ```
 nanocoder/
-├── cli.py          REPL + arg parsing
-├── agent.py        The agent loop (+ parallel tool execution)
-├── llm.py          Streaming OpenAI-compatible client
-├── context.py      3-layer context compression
-├── session.py      Save/resume conversations
-├── prompt.py       System prompt
-├── config.py       Env-based config
+├── cli.py            REPL + commands               160 lines
+├── agent.py          Agent loop + parallel tools    120 lines
+├── llm.py            Streaming client + retry       150 lines
+├── context.py        3-layer compression            145 lines
+├── session.py        Save/resume                     65 lines
+├── prompt.py         System prompt                   35 lines
+├── config.py         Env config                      30 lines
 └── tools/
-    ├── bash.py     Shell execution + dangerous command blocking
-    ├── read.py     File reading with line numbers
-    ├── write.py    File creation
-    ├── edit.py     Search-and-replace + unified diff
-    ├── glob_tool.py  File pattern matching
-    ├── grep.py     Regex content search
-    └── agent.py    Sub-agent spawning
+    ├── bash.py       Shell + safety + cd tracking    95 lines
+    ├── edit.py       Search-replace + diff            70 lines
+    ├── read.py       File reading                     40 lines
+    ├── write.py      File writing                     30 lines
+    ├── glob_tool.py  File search                      35 lines
+    ├── grep.py       Content search                   65 lines
+    └── agent.py      Sub-agent spawning               50 lines
 ```
 
-### The Key Ideas (from Claude Code)
+## Use as a Library
 
-These are the patterns I consider most important after reading the full source. NanoCoder implements all of them:
+```python
+from nanocoder import Agent, LLM
 
-**Search-and-replace editing.** Claude Code doesn't do line-number patches or whole-file rewrites. Instead, the LLM specifies an *exact substring* to find and its replacement. The substring must be unique in the file. This one constraint eliminates an entire class of editing bugs — no more "edited the wrong occurrence" or "line numbers shifted." NanoCoder's implementation shows a unified diff after every edit so you can see exactly what changed.
+llm = LLM(model="deepseek-chat", api_key="sk-...", base_url="https://api.deepseek.com")
+agent = Agent(llm=llm)
+response = agent.chat("find all TODO comments in this project")
+```
 
-**The agentic tool loop.** User speaks → LLM responds with tool calls → tools execute → results go back to LLM → repeat until the LLM responds with text. Simple on paper, but the devil is in the details: what happens when there are 8 tool calls at once? (Parallel execution via ThreadPool.) What happens when context fills up? (3-layer compression.) What about a task too complex for one context window? (Sub-agent spawning.)
-
-**3-layer context compression.** Claude Code uses a 4-tier system (HISTORY_SNIP → Microcompact → CONTEXT_COLLAPSE → Autocompact). NanoCoder implements 3 of those: first snip verbose tool outputs to head+tail, then LLM-summarize old conversation turns, finally hard-collapse as a last resort. This means you can work on long tasks without hitting context limits.
-
-**Sub-agent delegation.** Claude Code's AgentTool (1,397 lines) spawns independent agents for complex sub-tasks, each with its own context window. NanoCoder does the same in 50 lines — `agent` tool creates a fresh Agent, runs the task, returns the summary.
-
-**Dangerous command detection.** `rm -rf /`, fork bombs, `curl | bash` — blocked before they execute. Claude Code's BashTool is 1,143 lines of safety checks; NanoCoder implements the essential patterns.
-
-## Extending It
-
-Adding a tool is ~20 lines:
+## Add Your Own Tools
 
 ```python
 from nanocoder.tools.base import Tool
 
 class HttpTool(Tool):
     name = "http"
-    description = "Make an HTTP request."
-    parameters = {
-        "type": "object",
-        "properties": {
-            "url": {"type": "string", "description": "URL to fetch"},
-            "method": {"type": "string", "description": "HTTP method", "default": "GET"},
-        },
-        "required": ["url"],
-    }
+    description = "Fetch a URL."
+    parameters = {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}
 
-    def execute(self, url: str, method: str = "GET") -> str:
+    def execute(self, url: str) -> str:
         import urllib.request
-        resp = urllib.request.urlopen(url)
-        return resp.read().decode()[:5000]
+        return urllib.request.urlopen(url).read().decode()[:5000]
 ```
 
-Register in `tools/__init__.py`, done.
+## Commands
 
-Or use it as a library:
-
-```python
-from nanocoder.agent import Agent
-from nanocoder.llm import LLM
-
-llm = LLM(model="deepseek-chat", api_key="sk-...", base_url="https://api.deepseek.com")
-agent = Agent(llm=llm)
-response = agent.chat("find all TODO comments in this project and list them")
 ```
-
-## REPL Commands
-
-| Command | What it does |
-|---|---|
-| `/model <name>` | Switch model mid-conversation |
-| `/tokens` | Show token usage this session |
-| `/save` | Save conversation to disk |
-| `/sessions` | List saved sessions |
-| `/reset` | Clear conversation history |
-| `quit` | Exit |
-
-Resume a session: `nanocoder -r <session_id>`
+/model <name>    Switch model
+/compact         Compress context
+/tokens          Token usage
+/save            Save session
+/sessions        List sessions
+/reset           Clear history
+quit             Exit
+```
 
 ## How It Compares
 
-|  | Claude Code | Claw-Code | NanoCoder |
-|---|---|---|---|
-| Code | 512K lines TS (proprietary) | 100K+ lines Python/Rust | **1,300 lines Python** |
-| Models | Anthropic only | Multi-provider | **Any OpenAI-compatible** |
-| Can you read all of it? | No | Not easily | **Yes, in an afternoon** |
-| Purpose | Use it | Use it | **Understand it, then build yours** |
+|  | Claude Code | Claw-Code | Aider | NanoCoder |
+|---|---|---|---|---|
+| Code | 512K lines (closed) | 100K+ lines | 50K+ lines | **1,300 lines** |
+| Models | Anthropic only | Multi | Multi | **Any OpenAI-compatible** |
+| Readable? | No | Hard | Medium | **One afternoon** |
+| Purpose | Use it | Use it | Use it | **Understand it, build yours** |
 
-## The Source Guide
+## The Deep Dive
 
-I also wrote a [7-part deep dive](article/) into Claude Code's architecture — covering everything from the agent loop to the permission system to the unreleased features hidden behind feature flags. If you want to understand *why* NanoCoder is built the way it is, start there.
+I wrote [7 articles](article/) breaking down Claude Code's architecture in detail — the agent loop, tool system, context compression, streaming executor, multi-agent, and hidden features behind 44 feature flags. If you want to understand *why* NanoCoder is built this way, start there.
 
 ## License
 
-MIT. Fork it, learn from it, build something better.
+MIT. Fork it, learn from it, ship something better.
 
 ---
 
-Built by [Yufeng He](https://github.com/he-yufeng) · Agentic AI Researcher @ Moonshot AI (Kimi) · [Claude Code source analysis (170K+ reads on Zhihu)](https://zhuanlan.zhihu.com/p/1898797658343862272)
+Built by **[Yufeng He](https://github.com/he-yufeng)** · Agentic AI Researcher @ Moonshot AI (Kimi)
+
+[Claude Code Source Analysis — 170K+ reads on Zhihu](https://zhuanlan.zhihu.com/p/1898797658343862272)

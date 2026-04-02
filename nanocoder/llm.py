@@ -6,9 +6,10 @@ provider by changing OPENAI_BASE_URL + OPENAI_API_KEY. That's it.
 """
 
 import json
+import time
 from dataclasses import dataclass, field
 
-from openai import OpenAI
+from openai import OpenAI, APIError, RateLimitError, APITimeoutError, APIConnectionError
 
 
 @dataclass
@@ -74,14 +75,13 @@ class LLM:
         if tools:
             params["tools"] = tools
 
-        # stream_options is an OpenAI extension; not all providers support it,
-        # so try with it first and fall back without on error
+        # stream_options is an OpenAI extension; not all providers support it
         try:
             params["stream_options"] = {"include_usage": True}
-            stream = self.client.chat.completions.create(**params)
+            stream = self._call_with_retry(params)
         except Exception:
             params.pop("stream_options", None)
-            stream = self.client.chat.completions.create(**params)
+            stream = self._call_with_retry(params)
 
         content_parts: list[str] = []
         tc_map: dict[int, dict] = {}  # index -> {id, name, arguments_str}
@@ -137,3 +137,20 @@ class LLM:
             prompt_tokens=prompt_tok,
             completion_tokens=completion_tok,
         )
+
+    def _call_with_retry(self, params: dict, max_retries: int = 3):
+        """Retry on transient errors with exponential backoff."""
+        for attempt in range(max_retries):
+            try:
+                return self.client.chat.completions.create(**params)
+            except (RateLimitError, APITimeoutError, APIConnectionError) as e:
+                if attempt == max_retries - 1:
+                    raise
+                wait = 2 ** attempt
+                time.sleep(wait)
+            except APIError as e:
+                # 5xx = server error, retry; 4xx = client error, don't
+                if e.status_code and e.status_code >= 500 and attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+                else:
+                    raise

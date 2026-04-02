@@ -13,3 +13,5 @@ venv/
 .ruff_cache/
 .nanocoder_history
 .DS_Store
+dist/
+.pytest_cache/
