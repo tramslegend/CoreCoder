@@ -45,6 +45,25 @@ class LLMResponse:
         return msg
 
 
+# pricing per million tokens: (input, output)
+_PRICING = {
+    "gpt-4o": (2.5, 10),
+    "gpt-4o-mini": (0.15, 0.6),
+    "gpt-4.1": (2, 8),
+    "gpt-4.1-mini": (0.4, 1.6),
+    "gpt-4.1-nano": (0.1, 0.4),
+    "o3": (2, 8),
+    "o4-mini": (1.1, 4.4),
+    "deepseek-chat": (0.27, 1.10),
+    "deepseek-reasoner": (0.55, 2.19),
+    "claude-sonnet-4-6": (3, 15),
+    "claude-opus-4-6": (15, 75),
+    "claude-haiku-4-5": (0.8, 4),
+    "qwen-max": (1.6, 6.4),
+    "kimi-k2.5": (0.7, 2.8),
+}
+
+
 class LLM:
     def __init__(
         self,
@@ -58,6 +77,18 @@ class LLM:
         self.extra = kwargs  # temperature, max_tokens, etc.
         self.total_prompt_tokens = 0
         self.total_completion_tokens = 0
+
+    @property
+    def estimated_cost(self) -> float | None:
+        """Rough cost estimate in USD. Returns None if model not in pricing table."""
+        pricing = _PRICING.get(self.model)
+        if not pricing:
+            return None
+        input_rate, output_rate = pricing
+        return (
+            self.total_prompt_tokens * input_rate / 1_000_000
+            + self.total_completion_tokens * output_rate / 1_000_000
+        )
 
     def chat(
         self,

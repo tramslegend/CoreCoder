@@ -139,9 +139,11 @@ class HttpTool(Tool):
 ## 命令
 
 ```
+/model           查看当前模型
 /model <名称>    切换模型
 /compact         压缩上下文（对标 Claude Code 的 /compact）
-/tokens          查看 token 用量
+/tokens          查看 token 用量 + 费用估算
+/diff            查看本次会话修改的文件
 /save            保存会话
 /sessions        列出已保存的会话
 /reset           清空历史

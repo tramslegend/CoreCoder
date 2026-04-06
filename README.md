@@ -139,9 +139,11 @@ class HttpTool(Tool):
 ## Commands
 
 ```
+/model           Show current model
 /model <name>    Switch model mid-conversation
 /compact         Compress context (like Claude Code's /compact)
-/tokens          Token usage
+/tokens          Token usage + cost estimate
+/diff            Show files modified this session
 /save            Save session to disk
 /sessions        List saved sessions
 /reset           Clear history

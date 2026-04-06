@@ -9,6 +9,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from prompt_toolkit import prompt as pt_prompt
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings
 
 from .agent import Agent
 from .llm import LLM
@@ -118,9 +119,26 @@ def _repl(agent: Agent, config: Config):
     hist_path = os.path.expanduser("~/.corecoder_history")
     history = FileHistory(hist_path)
 
+    # Enter submits, Escape+Enter inserts a newline (for pasting code blocks etc.)
+    kb = KeyBindings()
+
+    @kb.add("enter")
+    def _submit(event):
+        event.current_buffer.validate_and_handle()
+
+    @kb.add("escape", "enter")
+    def _newline(event):
+        event.current_buffer.insert_text("\n")
+
     while True:
         try:
-            user_input = pt_prompt("You > ", history=history).strip()
+            user_input = pt_prompt(
+                "You > ",
+                history=history,
+                multiline=True,
+                key_bindings=kb,
+                prompt_continuation="...  ",
+            ).strip()
         except (EOFError, KeyboardInterrupt):
             console.print("\nBye!")
             break
@@ -141,14 +159,20 @@ def _repl(agent: Agent, config: Config):
         if user_input == "/tokens":
             p = agent.llm.total_prompt_tokens
             c = agent.llm.total_completion_tokens
-            console.print(f"Tokens used this session: [cyan]{p}[/cyan] prompt + [cyan]{c}[/cyan] completion = [bold]{p+c}[/bold] total")
+            line = f"Tokens: [cyan]{p}[/cyan] prompt + [cyan]{c}[/cyan] completion = [bold]{p+c}[/bold] total"
+            cost = agent.llm.estimated_cost
+            if cost is not None:
+                line += f"  (~${cost:.4f})"
+            console.print(line)
             continue
-        if user_input.startswith("/model "):
-            new_model = user_input[7:].strip()
+        if user_input == "/model" or user_input.startswith("/model "):
+            new_model = user_input[7:].strip() if user_input.startswith("/model ") else ""
             if new_model:
                 agent.llm.model = new_model
                 config.model = new_model
                 console.print(f"Switched to [cyan]{new_model}[/cyan]")
+            else:
+                console.print(f"Current model: [cyan]{config.model}[/cyan]")
             continue
         if user_input == "/compact":
             from .context import estimate_tokens
@@ -164,6 +188,15 @@ def _repl(agent: Agent, config: Config):
             sid = save_session(agent.messages, config.model)
             console.print(f"[green]Session saved: {sid}[/green]")
             console.print(f"Resume with: corecoder -r {sid}")
+            continue
+        if user_input == "/diff":
+            from .tools.edit import _changed_files
+            if not _changed_files:
+                console.print("[dim]No files modified this session.[/dim]")
+            else:
+                console.print(f"[bold]Files modified this session ({len(_changed_files)}):[/bold]")
+                for f in sorted(_changed_files):
+                    console.print(f"  [cyan]{f}[/cyan]")
             continue
         if user_input == "/sessions":
             sessions = list_sessions()
@@ -202,12 +235,18 @@ def _show_help():
         "[bold]Commands:[/bold]\n"
         "  /help          Show this help\n"
         "  /reset         Clear conversation history\n"
+        "  /model         Show current model\n"
         "  /model <name>  Switch model mid-conversation\n"
         "  /tokens        Show token usage\n"
         "  /compact       Compress conversation context\n"
+        "  /diff          Show files modified this session\n"
         "  /save          Save session to disk\n"
         "  /sessions      List saved sessions\n"
-        "  quit           Exit CoreCoder",
+        "  quit           Exit CoreCoder\n"
+        "\n"
+        "[bold]Input:[/bold]\n"
+        "  Enter          Submit message\n"
+        "  Esc+Enter      Insert newline (for pasting code)",
         title="CoreCoder Help",
         border_style="dim",
     ))
