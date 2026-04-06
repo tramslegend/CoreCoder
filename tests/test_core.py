@@ -7,6 +7,7 @@ import tempfile
 from corecoder import Agent, LLM, Config, ALL_TOOLS, __version__
 from corecoder.context import ContextManager, estimate_tokens
 from corecoder.session import save_session, load_session, list_sessions
+from corecoder.tools import get_tool
 
 
 def test_version():
@@ -96,3 +97,50 @@ def test_session_not_found():
 def test_list_sessions():
     sessions = list_sessions()
     assert isinstance(sessions, list)
+
+
+# --- Cost estimation ---
+
+def test_cost_estimation_known_model():
+    from corecoder.llm import LLM
+    llm = LLM.__new__(LLM)
+    llm.model = "gpt-4o"
+    llm.total_prompt_tokens = 1_000_000
+    llm.total_completion_tokens = 500_000
+    cost = llm.estimated_cost
+    assert cost is not None
+    assert cost == 2.5 + 5.0  # $2.5/M in + $10/M out * 0.5M
+
+def test_cost_estimation_unknown_model():
+    from corecoder.llm import LLM
+    llm = LLM.__new__(LLM)
+    llm.model = "some-custom-model"
+    llm.total_prompt_tokens = 1000
+    llm.total_completion_tokens = 500
+    assert llm.estimated_cost is None
+
+
+# --- Changed files tracking ---
+
+def test_edit_tracks_changed_files():
+    from corecoder.tools.edit import _changed_files
+    _changed_files.clear()
+    edit = get_tool("edit_file")
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("aaa\nbbb\n")
+        f.flush()
+        edit.execute(file_path=f.name, old_string="aaa", new_string="zzz")
+        assert any(f.name in p for p in _changed_files)
+        os.unlink(f.name)
+    _changed_files.clear()
+
+
+def test_write_tracks_changed_files():
+    from corecoder.tools.edit import _changed_files
+    _changed_files.clear()
+    write = get_tool("write_file")
+    path = tempfile.mktemp(suffix=".txt")
+    write.execute(file_path=path, content="tracked\n")
+    assert any("tracked" not in p and path.split("/")[-1] in p for p in _changed_files) or len(_changed_files) > 0
+    os.unlink(path)
+    _changed_files.clear()
