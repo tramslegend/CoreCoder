@@ -54,7 +54,7 @@ Every pattern is a real, runnable implementation — not a diagram or a blog pos
 pip install nanocoderagent
 ```
 
-Pick your model — any OpenAI-compatible API works:
+Pick your model — any OpenAI-compatible API works. You can `export` env vars or drop a `.env` file in your project root:
 
 ```bash
 # Kimi K2.5

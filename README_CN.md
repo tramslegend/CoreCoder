@@ -54,7 +54,7 @@ Claude Code 51 万行源码提炼出来的 7 个核心模式：
 pip install nanocoderagent
 ```
 
-选你的模型，任何 OpenAI 兼容 API 都行：
+选你的模型，任何 OpenAI 兼容 API 都行。可以 `export` 环境变量，也可以在项目根目录放一个 `.env` 文件：
 
 ```bash
 # Kimi K2.5
