@@ -47,6 +47,8 @@ HISTORY_SNIP 做的事情：遍历历史消息中所有 `role: "tool"` 的结果
 
 这是成本最低的压缩——不需要调 LLM，不会丢失关键信息（头尾保留），效果立竿见影。一次 grep 的输出从 2000 token 压到 100 token，什么都没丢。
 
+> **注意**：Claude Code 源码中 `HISTORY_SNIP` feature flag 存在且被多处引用，但具体实现模块（`snipCompact.js` 等）在公开/泄露的版本中并未包含，属于内部 A/B 测试。Claude Code 目前公开的截断逻辑是 `BashTool/utils.ts` 的 head-only 截断。上面描述的 head+tail 策略是 CoreCoder 自己的设计选择，不是从 Claude Code 直接移植的。
+
 CoreCoder 的 `context.py` 里的 `_snip_tool_outputs()` 是这一层的实现。
 
 ### 第二层：CACHED_MICROCOMPACT — 花钱压缩
