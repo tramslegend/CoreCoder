@@ -2,7 +2,7 @@
 
 # CoreCoder
 
-**编程 agent 里的 nanoGPT。1.3k 行引擎、整包 2594 行纯 Python 全部一口气可读，读懂一个 coding agent 到底怎么运作，再 fork 出你自己的。**
+**编程 agent 里的 nanoGPT。1.3k 行引擎、整包 2735 行纯 Python 全部一口气可读，读懂一个 coding agent 到底怎么运作，再 fork 出你自己的。**
 
 *learn from it · fork it · ship something better*
 
@@ -25,7 +25,7 @@
 
 | | CoreCoder | Claude Code | aider | nanoGPT |
 |---|---|---|---|---|
-| 代码量 | 引擎约 1308 行 / 整包 2594 行 | 几十万行（闭源） | 数万行 Python | 约 600 行（两个文件） |
+| 代码量 | 引擎约 1309 行 / 整包 2735 行 | 几十万行（闭源） | 数万行 Python | 约 600 行（两个文件） |
 | 读完要多久 | 一个下午 | 读不了（闭源） | 得啃几天 | 一个下午 |
 | 能不能下断点改了再跑 | 能，每一行 | 不能 | 能，但量大 | 能 |
 | 定位 | 读懂并 fork 出你自己的 agent | 生产级编程助手 | 终端结对编程 | 教学用最小 GPT |
@@ -36,9 +36,9 @@ nanoGPT 那一列是拿来对照的：它最小、可读，但教的是训一个
 
 我一直觉得 coding agent 被讲得太玄了。把 Claude Code、Cursor 这类工具扒到底，核心是一个 while 循环套着一个大模型，外加七八个让它能真正动手的工具。难的从来不是这个循环，而是循环跑进真实世界以后要兜的那些底。CoreCoder 就是把这个核心老老实实写出来的最小版本。
 
-引擎部分（循环、模型接口、上下文、工具、会话）去掉空行和注释是 1309 行。连最外层的 CLI、配置、打包一起算，整个包 25 个文件、物理 2658 行、净 2138 行，每个文件都短到能一口气读完。自 1161 行快照之后的增长都花在了看得见的功能上：plan mode、hooks、checkpoints，下文各有交代。
+引擎部分（循环、模型接口、上下文、工具、会话）去掉空行和注释是 1309 行。连最外层的 CLI、配置、打包一起算，整个包 25 个文件、物理 2735 行、净 2205 行，每个文件都短到能一口气读完。自 1161 行快照之后的增长都花在了看得见的功能上：plan mode、hooks、checkpoints，下文各有交代。
 
-它真能跑：读写文件、执行 shell、派子 agent、分三层压上下文，还能随时把这趟烧掉的 token 和美元数报给你。任何要动你磁盘、要跑命令的调用，都会先停下来等你点头，171 个测试是绿的。但能跑不是为了劝你拿去日用，而是为了让这份「注释」不撒谎：一个解释 agent 怎么运作的范例，自己得真能运作。
+它真能跑：读写文件、执行 shell、派子 agent、分三层压上下文，还能随时把这趟烧掉的 token 和美元数报给你。任何要动你磁盘、要跑命令的调用，都会先停下来等你点头，202 个测试是绿的。但能跑不是为了劝你拿去日用，而是为了让这份「注释」不撒谎：一个解释 agent 怎么运作的范例，自己得真能运作。
 
 代码来自一次公开拆解。公开的源码分析里，Claude Code 这类生产级 agent 暴露出不少关键架构，我挑出最核心的一层，用尽量少的代码诚实地复写了一遍。所以读 CoreCoder，约等于读一份基于公开源码分析的「可运行注释版」：讲的是这类 agent 的核心思路，而它本身只是最小复写，就摆在你机器上，随你拆、随你改。
 
@@ -91,15 +91,15 @@ corecoder/
 ├── llm.py          流式客户端 + 重试 + 成本统计       332 行
 ├── context.py      三层上下文压缩                     220 行
 ├── session.py      会话存盘 / 续聊 + 路径穿越防护      97 行
-├── permissions.py  改动类工具的用户授权                48 行
+├── permissions.py  改动类工具的用户授权                75 行
 ├── hooks.py        工具调用前后的用户 shell 钩子        87 行
 ├── shell.py        POSIX shell 路由（Windows 走 Git Bash） 61 行
 ├── mcp.py          MCP stdio 客户端，接外部工具       208 行
 ├── prompt.py       系统提示词                          41 行
 ├── cli.py          REPL + 斜杠命令 + 一次性模式        358 行
 ├── config.py       环境变量配置                        55 行
-├── checkpoints.py  /undo 快照与回滚                      44 行
-├── demo.py         离线端到端演示                       100 行
+├── checkpoints.py  /undo 快照与回滚                      93 行
+├── demo.py         离线端到端演示                       101 行
 └── tools/
     ├── bash.py       shell + 危险命令闸 + cd 追踪      203 行
     ├── edit.py       唯一匹配搜索替换 + diff            99 行
@@ -153,7 +153,7 @@ def chat(self, user_input):
 
 - **[导言 · 用 CoreCoder 读懂 Claude Code，再造一个你自己的](article/00-index.md)**
 - **[01 一个 agent 的本体，是一个 while 循环](article/01-the-loop.md)** — `agent.py` 的主循环、打断与轮次上限
-- **[02 工具系统：让模型安全地动手](article/02-tools.md)** — `tools/` 七个工具与 bash 安全闸
+- **[02 工具系统：让模型安全地动手](article/02-tools.md)** — `tools/` 八个工具与 bash 安全闸
 - **[03 接入任意大模型，顺便把账算清楚](article/03-llm-and-cost.md)** — `llm.py` 的 provider 包装、重试与成本统计
 - **[04 用有限的窗口扛住一个长任务](article/04-context.md)** — `context.py` 的三层压缩与孤儿 tool 消息
 - **[05 并行执行与子 agent](article/05-parallel-and-subagents.md)** — 线程池并发与子 agent 隔离
@@ -201,13 +201,13 @@ README 只给方向，每条的代码细节第七篇接着讲。挑一个动手�
 quit / exit      退出（Ctrl+C 取消当前回合）
 ```
 
-会话 ID 会先清洗成安全字符再拿去当文件名，存档统统落在 `~/.corecoder/sessions` 里，恶意会话名穿越不出去。
+会话 ID 会先清洗成安全字符再拿去当文件名，存档统统落在 `~/.corecoder/sessions` 里，恶意会话名穿越不出去。undo 历史也一样落盘：快照写在 `~/.corecoder/checkpoints.json`，重启之后 `/undo` 照样能往回撤。
 
 ## 权限
 
 只读工具（`read_file`、`glob`、`grep`、`todo_write`）模型一调就跑。会动手的那些（`edit_file`、`write_file`、`bash`，以及派生子 agent）先停下来等你点头，REPL 启动横幅里能看到当前是哪种模式：
 
-- REPL 里每次调用问一次：允许这一次、本工具本次会话都允许、或者拒绝。「都允许」按工具记到会话结束；子 agent 继承同一层授权，活走到哪，许可跟到哪。
+- REPL 里每次调用问一次：允许这一次、本工具一直允许、或者拒绝。「一直允许」按工具记下，写进 `~/.corecoder/permissions.json`，重启也有效；子 agent 继承同一层授权，活走到哪，许可跟到哪。
 - 一次性模式（`-p`）没人可问，改动类调用当场被拒，拒绝理由作为普通工具结果回给模型：循环绝不会卡在等一个永远不会来的输入上。要全部预授权就加 `--yes`（脚本、CI 场景）。
 - 判断本身是 `permissions.py` 里的纯逻辑，终端只是塞进来一个提问回调。不用 TTY 也能单测授权逻辑，或者直接搬进你自己的嵌入场景。
 
@@ -235,8 +235,8 @@ REPL 里 `/plan` 开关计划模式。开着的时候，提示符变成 `(plan)`
 #    模型同一回合就能看到输出，自己把低级错误修了，不用等 CI 回来。
 {
   "PostToolUse": [{
-    "matcher": "edit",
-    "command": "f=$(jq -r .tool_input.path); ruff check \"$f\" 2>&1 | head -20"
+    "matcher": "edit_file",
+    "command": "f=$(jq -r .tool_input.file_path); ruff check \"$f\" 2>&1 | head -20"
   }]
 }
 
@@ -244,8 +244,8 @@ REPL 里 `/plan` 开关计划模式。开着的时候，提示符变成 `(plan)`
 #    拒绝原因会送到模型那边。
 {
   "PreToolUse": [{
-    "matcher": "edit",
-    "command": "case \"$(jq -r .tool_input.path)\" in .env*|*/secrets/*|*.pem) echo 'that path is off-limits' >&2; exit 2;; esac"
+    "matcher": "edit_file",
+    "command": "case \"$(jq -r .tool_input.file_path)\" in .env*|*/secrets/*|*.pem) echo 'that path is off-limits' >&2; exit 2;; esac"
   }]
 }
 ```
@@ -278,7 +278,7 @@ REPL 里 `/plan` 开关计划模式。开着的时候，提示符变成 `(plan)`
 
 ## 贡献 / License
 
-动手之前先跑一遍 `pytest tests/ -q`（171 个测试）、`ruff check` 和 `compileall`，绿了再提。MIT License，欢迎 fork 拿去造更好的东西，能在 README 里留一句出处就更好。
+动手之前先跑一遍 `pytest tests/ -q`（202 个测试）、`ruff check` 和 `compileall`，绿了再提。MIT License，欢迎 fork 拿去造更好的东西，能在 README 里留一句出处就更好。
 
 ---
 

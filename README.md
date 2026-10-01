@@ -2,7 +2,7 @@
 
 # CoreCoder
 
-**The nanoGPT of coding agents. A 1.3k-line engine inside 2,658 readable lines of pure Python: understand how a coding agent actually works, then fork your own.**
+**The nanoGPT of coding agents. A 1.3k-line engine inside 2,735 readable lines of pure Python: understand how a coding agent actually works, then fork your own.**
 
 *learn from it · fork it · ship something better*
 
@@ -25,7 +25,7 @@
 
 | | CoreCoder | Claude Code | aider | nanoGPT |
 |---|---|---|---|---|
-| Lines of code | ~1,309 engine / 2,658 total | hundreds of thousands (closed) | tens of thousands of Python | ~600 (two files) |
+| Lines of code | ~1,309 engine / 2,735 total | hundreds of thousands (closed) | tens of thousands of Python | ~600 (two files) |
 | Time to read it all | one afternoon | can't (closed) | a few days of slogging | one afternoon |
 | Breakpoint, change, rerun? | yes, every line | no | yes, but there's a lot | yes |
 | What it's for | understand one, then fork your own | production coding assistant | terminal pair-programming | minimal GPT for teaching |
@@ -36,9 +36,9 @@ The nanoGPT column is there as a reference point: minimal, readable, but it teac
 
 I've always felt coding agents get talked about as if they were arcane. Strip a tool like Claude Code or Cursor all the way down and the core is a `while` loop wrapped around a large model, plus seven or eight tools that let it actually do things. The hard part was never the loop; it's everything the loop has to cope with once it meets the real world. CoreCoder is the minimal version that writes that core out honestly.
 
-The engine (loop, model interface, context, tools, sessions) is 1,309 lines once you drop blank lines and comments. Counting the outer CLI, config and packaging too, the whole package is 25 files: 2,658 physical lines, 2,138 net, every one short enough to read in a single sitting. The growth since the original 1,161-line snapshot went into visible features: plan mode, hooks and checkpoints, each documented below.
+The engine (loop, model interface, context, tools, sessions) is 1,309 lines once you drop blank lines and comments. Counting the outer CLI, config and packaging too, the whole package is 25 files: 2,735 physical lines, 2,205 net, every one short enough to read in a single sitting. The growth since the original 1,161-line snapshot went into visible features: plan mode, hooks and checkpoints, each documented below.
 
-And it really runs: reads and writes files, executes shell, spawns sub-agents, compacts context in three tiers, and tells you the tokens and dollars a run burned whenever you ask. Anything that would mutate your disk or run a command stops for your consent first. 171 tests, all green. But the point of it running isn't to become your daily driver. It runs so the walkthrough can't lie: a reference that shows how an agent works has to actually work.
+And it really runs: reads and writes files, executes shell, spawns sub-agents, compacts context in three tiers, and tells you the tokens and dollars a run burned whenever you ask. Anything that would mutate your disk or run a command stops for your consent first. 202 tests, all green. But the point of it running isn't to become your daily driver. It runs so the walkthrough can't lie: a reference that shows how an agent works has to actually work.
 
 The code came out of a public teardown: open analyses have already exposed a lot of the load-bearing architecture inside production agents like Claude Code. I took the most essential layer and rewrote it honestly, in as little code as I could. So reading CoreCoder is roughly like reading a runnable, annotated take on how that kind of agent works, except it's only a minimal reimplementation, sitting right there on your machine for you to take apart and change.
 
@@ -91,15 +91,15 @@ corecoder/
 ├── llm.py          streaming client + retry + cost        332 lines
 ├── context.py      three-tier context compaction          220 lines
 ├── session.py      save / resume + path-traversal guard    97 lines
-├── permissions.py  consent for mutating tools              48 lines
+├── permissions.py  consent for mutating tools              75 lines
 ├── hooks.py        Pre/PostToolUse shell hooks             87 lines
 ├── shell.py        POSIX shell routing (Git Bash on Windows) 61 lines
 ├── mcp.py          MCP stdio client for external tools    208 lines
 ├── prompt.py       system prompt                           41 lines
 ├── cli.py          REPL + slash commands + one-shot       358 lines
 ├── config.py       env-var config                          55 lines
-├── checkpoints.py  /undo snapshot and restore                44 lines
-├── demo.py         offline end-to-end demo                 100 lines
+├── checkpoints.py  /undo snapshot and restore               93 lines
+├── demo.py         offline end-to-end demo                 101 lines
 └── tools/
     ├── bash.py       shell + dangerous-command gate + cd  203 lines
     ├── edit.py       unique-match search/replace + diff    99 lines
@@ -153,7 +153,7 @@ I also wrote a bilingual source-reading series, one intro plus eight parts, each
 
 - **[Intro · Read Claude Code through CoreCoder, then build your own](article/00-index_EN.md)**
 - **[01 · An agent, at its core, is a `while` loop](article/01-the-loop_EN.md)** — the main loop in `agent.py`, interrupts, and the round limit
-- **[02 · The tool system: letting the model act, safely](article/02-tools_EN.md)** — the seven tools in `tools/` and the bash safety gate
+- **[02 · The tool system: letting the model act, safely](article/02-tools_EN.md)** — the eight tools in `tools/` and the bash safety gate
 - **[03 · Plug in any LLM, and keep the bill honest](article/03-llm-and-cost_EN.md)** — `llm.py`'s provider wrapper, retries, and cost accounting
 - **[04 · Surviving a long task on a finite window](article/04-context_EN.md)** — `context.py`'s three-tier compaction and orphaned tool messages
 - **[05 · Parallel execution and sub-agents](article/05-parallel-and-subagents_EN.md)** — thread-pool concurrency and sub-agent isolation
@@ -201,13 +201,13 @@ Inside the REPL, `/help` lists everything; these are the ones you'll reach for:
 quit / exit      exit (Ctrl+C cancels the current round)
 ```
 
-Session IDs are sanitized to safe characters before they become filenames, every archive lands under `~/.corecoder/sessions`, and a malicious session name can't traverse out.
+Session IDs are sanitized to safe characters before they become filenames, every archive lands under `~/.corecoder/sessions`, and a malicious session name can't traverse out. Undo history persists the same way: checkpoints land in `~/.corecoder/checkpoints.json`, so `/undo` still reaches back after a restart.
 
 ## Permissions
 
 Read-only tools (`read_file`, `glob`, `grep`, `todo_write`) run the moment the model asks. The mutating ones (`edit_file`, `write_file`, `bash`, and spawning a sub-agent) stop for consent first, and the REPL banner shows which mode you're in:
 
-- In the REPL you get one prompt per call: allow once, always allow this tool, or deny. "Always" is remembered per tool for the rest of the session, and a sub-agent inherits the same layer, so consent follows the work wherever it happens.
+- In the REPL you get one prompt per call: allow once, always allow this tool, or deny. "Always" is remembered per tool and persists in `~/.corecoder/permissions.json` across restarts; a sub-agent inherits the same layer, so consent follows the work wherever it happens.
 - In one-shot mode (`-p`) there is nobody to ask, so a mutating call is refused on the spot and the refusal goes back to the model as an ordinary tool result: the loop never hangs on input that can't arrive. Pass `--yes` to approve everything up front (scripts, CI).
 - The decision itself is pure logic in `permissions.py`, with the terminal only supplying the prompt callback. You can unit-test consent without a TTY, or reuse the layer in your own embedding.
 
@@ -236,8 +236,8 @@ Two worth stealing (the commands lean on `jq`, the usual suspect):
 #    the same turn instead of waiting for CI.
 {
   "PostToolUse": [{
-    "matcher": "edit",
-    "command": "f=$(jq -r .tool_input.path); ruff check \"$f\" 2>&1 | head -20"
+    "matcher": "edit_file",
+    "command": "f=$(jq -r .tool_input.file_path); ruff check \"$f\" 2>&1 | head -20"
   }]
 }
 
@@ -245,8 +245,8 @@ Two worth stealing (the commands lean on `jq`, the usual suspect):
 #    touch. Exit code 2 vetoes the call and the message reaches the model.
 {
   "PreToolUse": [{
-    "matcher": "edit",
-    "command": "case \"$(jq -r .tool_input.path)\" in .env*|*/secrets/*|*.pem) echo 'that path is off-limits' >&2; exit 2;; esac"
+    "matcher": "edit_file",
+    "command": "case \"$(jq -r .tool_input.file_path)\" in .env*|*/secrets/*|*.pem) echo 'that path is off-limits' >&2; exit 2;; esac"
   }]
 }
 ```
@@ -279,7 +279,7 @@ If working through CoreCoder was useful, here are a few other tools I've built a
 
 ## Contributing / License
 
-Before you send anything, run `pytest tests/ -q` (171 tests), `ruff check`, and `compileall`, and make sure they're green. MIT licensed: fork it, learn from it, ship something better. A mention of this project is appreciated.
+Before you send anything, run `pytest tests/ -q` (202 tests), `ruff check`, and `compileall`, and make sure they're green. MIT licensed: fork it, learn from it, ship something better. A mention of this project is appreciated.
 
 ---
 
