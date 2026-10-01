@@ -17,7 +17,7 @@ from .config import Config
 from .hooks import load_hooks
 from .llm import LLM, LiteLLM
 from .mcp import load_mcp_tools
-from .permissions import Permission
+from .permissions import DEFAULT_STORE, Permission
 from .session import list_sessions, load_session, save_session
 from .tools import ALL_TOOLS
 
@@ -88,7 +88,7 @@ def main():
     elif args.prompt:
         permission = Permission()
     else:
-        permission = Permission(ask=_ask_permission)
+        permission = Permission(ask=_ask_permission, persist_path=DEFAULT_STORE)
     agent = Agent(
         llm=llm,
         tools=[*ALL_TOOLS, *load_mcp_tools()],
